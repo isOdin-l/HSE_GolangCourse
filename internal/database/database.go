@@ -3,12 +3,20 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/config"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func New(ctx context.Context, cfg *config.DbConfig) (*pgxpool.Pool, error) {
+type Database struct {
+	pool         *pgxpool.Pool
+	queryTimeout time.Duration
+}
+
+func New(ctx context.Context, cfg *config.DbConfig) (*Database, error) {
 	poolConfig, err := pgxpool.ParseConfig(cfg.Url)
 	if err != nil {
 		return nil, err
@@ -27,8 +35,48 @@ func New(ctx context.Context, cfg *config.DbConfig) (*pgxpool.Pool, error) {
 	}
 
 	if err := pool.Ping(pingCtx); err != nil {
+		pool.Close()
 		return nil, fmt.Errorf("ping PostgreSQL: %w", err)
 	}
 
-	return pool, nil
+	return &Database{
+		pool:         pool,
+		queryTimeout: cfg.QueryTimeout,
+	}, nil
+}
+
+func (d *Database) Pool() *pgxpool.Pool {
+	return d.pool
+}
+
+func (d *Database) Close() {
+	d.pool.Close()
+}
+
+func (d *Database) Ping(ctx context.Context) error {
+	pingCtx, cancel := context.WithTimeout(ctx, d.pool.Config().PingTimeout)
+	defer cancel()
+
+	return d.pool.Ping(pingCtx)
+}
+
+func (d *Database) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
+	qctx, cancel := context.WithTimeout(ctx, d.queryTimeout)
+	defer cancel()
+
+	return d.pool.Exec(qctx, sql, args...)
+}
+
+func (d *Database) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	qctx, cancel := context.WithTimeout(ctx, d.queryTimeout)
+	defer cancel()
+
+	return d.pool.Query(qctx, sql, args...)
+}
+
+func (d *Database) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
+	qctx, cancel := context.WithTimeout(ctx, d.queryTimeout)
+	defer cancel()
+
+	return d.pool.QueryRow(qctx, sql, args...)
 }

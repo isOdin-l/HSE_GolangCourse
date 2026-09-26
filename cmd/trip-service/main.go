@@ -11,13 +11,14 @@ import (
 
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/config"
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/database"
+	db "github.com/isOdin-l/HSE_GolangCourse.git/internal/database"
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/server"
 )
 
 func main() {
 	config, err := config.Load()
 	if err != nil {
-		slog.Error("Error while parsing config: ", err.Error())
+		slog.Error("parse config", "error", err)
 		return
 	}
 
@@ -26,12 +27,14 @@ func main() {
 
 	database, err := database.New(ctx, &config.DbConfig)
 	if err != nil {
-		slog.Error("Database setup error", err)
+		slog.Error("database setup", "error", err)
 		return
 	}
 	defer database.Close()
 
-	server := server.New(config.ServerConfig)
+	// пока так
+	_ = db.NewTransactionManager(database.Pool())
+	server := server.New(nil, config.ServerConfig)
 
 	// graceful shutdown
 	serverErrors := make(chan error, 1)

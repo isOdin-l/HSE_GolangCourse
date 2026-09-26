@@ -6,8 +6,13 @@ import (
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/config"
 )
 
-func New(cfg config.ServerConfig) *http.Server {
+func New(h http.Handler, cfg config.ServerConfig) *http.Server {
 	return &http.Server{
-		Addr: cfg.HttpAddress,
+		Addr:              cfg.HttpAddress,
+		Handler:           h,
+		ReadTimeout:       cfg.ReadTimeout,
+		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+		WriteTimeout:      cfg.WriteTimeout,
+		IdleTimeout:       cfg.IdleTimeout,
 	}
 }
