@@ -12,6 +12,7 @@ import (
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/config"
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/database"
 	db "github.com/isOdin-l/HSE_GolangCourse.git/internal/database"
+	"github.com/isOdin-l/HSE_GolangCourse.git/internal/handler"
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/server"
 )
 
@@ -33,8 +34,9 @@ func main() {
 	defer database.Close()
 
 	// пока так
-	_ = db.NewTransactionManager(database.Pool())
-	server := server.New(nil, config.ServerConfig)
+	transactionManager := db.NewTransactionManager(database.Pool())
+	handler := handler.New(database, transactionManager)
+	server := server.New(handler, config.ServerConfig)
 
 	// graceful shutdown
 	serverErrors := make(chan error, 1)
