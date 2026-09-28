@@ -15,13 +15,17 @@ import (
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/queries"
 )
 
+type TxManager interface {
+	Do(ctx context.Context, fn func(ctx context.Context) error) error
+}
+
 type Handler struct {
 	db  *database.Database
-	txm *database.TransactionManager
+	txm TxManager
 	q   queries.Queries
 }
 
-func New(db *database.Database, txm *database.TransactionManager) http.Handler {
+func New(db *database.Database, txm TxManager) http.Handler {
 	h := Handler{
 		db:  db,
 		txm: txm,
@@ -52,9 +56,9 @@ func (h Handler) CreateTrip(w http.ResponseWriter, r *http.Request, params api.C
 	}
 
 	var trip *queries.Trip
-	err := h.txm.WithinTransaction(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
+	err := h.txm.Do(r.Context(), func(ctx context.Context) error {
 		var err error
-		trip, err = h.q.InsertTrip(ctx, tx,
+		trip, err = h.q.InsertTrip(ctx, h.db,
 			queries.InsertTripParams{
 				ID:        uuid.New(),
 				UserID:    uuid.UUID(body.UserId),
@@ -71,7 +75,7 @@ func (h Handler) CreateTrip(w http.ResponseWriter, r *http.Request, params api.C
 			return err
 		}
 
-		return h.q.InsertTripStatusHistory(ctx, tx, queries.InsertTripStatusHistoryParams{
+		return h.q.InsertTripStatusHistory(ctx, h.db, queries.InsertTripStatusHistoryParams{
 			TripID:   trip.ID,
 			ToStatus: queries.TripStatusActive,
 			Reason:   "trip created",
@@ -99,15 +103,15 @@ func (h Handler) GetTrip(w http.ResponseWriter, r *http.Request, tripId api.Trip
 func (h Handler) FinishTrip(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
 	var trip *queries.Trip
 
-	err := h.txm.WithinTransaction(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
+	err := h.txm.Do(r.Context(), func(ctx context.Context) error {
 		var err error
-		trip, err = h.q.FinishTrip(ctx, tx, uuid.UUID(tripId), time.Now())
+		trip, err = h.q.FinishTrip(ctx, h.db, uuid.UUID(tripId), time.Now())
 		if err != nil {
 			return err
 		}
 
 		active := queries.TripStatusActive
-		return h.q.InsertTripStatusHistory(ctx, tx, queries.InsertTripStatusHistoryParams{
+		return h.q.InsertTripStatusHistory(ctx, h.db, queries.InsertTripStatusHistoryParams{
 			TripID:     trip.ID,
 			FromStatus: &active,
 			ToStatus:   queries.TripStatusCompleted,

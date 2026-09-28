@@ -64,19 +64,32 @@ func (d *Database) Exec(ctx context.Context, sql string, args ...any) (pgconn.Co
 	qctx, cancel := context.WithTimeout(ctx, d.queryTimeout)
 	defer cancel()
 
-	return d.pool.Exec(qctx, sql, args...)
+	return d.executor(qctx).Exec(qctx, sql, args...)
 }
 
 func (d *Database) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
 	qctx, cancel := context.WithTimeout(ctx, d.queryTimeout)
 	defer cancel()
 
-	return d.pool.Query(qctx, sql, args...)
+	return d.executor(qctx).Query(qctx, sql, args...)
 }
 
 func (d *Database) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
 	qctx, cancel := context.WithTimeout(ctx, d.queryTimeout)
 	defer cancel()
 
-	return d.pool.QueryRow(qctx, sql, args...)
+	return d.executor(qctx).QueryRow(qctx, sql, args...)
+}
+
+type executor interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+func (d *Database) executor(ctx context.Context) executor {
+	if tx, ok := TxFromContext(ctx); ok {
+		return tx
+	}
+	return d.pool
 }
