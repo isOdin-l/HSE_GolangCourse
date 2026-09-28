@@ -2,13 +2,11 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 
 	api "github.com/isOdin-l/HSE_GolangCourse.git/api/generated"
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/database"
@@ -31,7 +29,9 @@ func New(db *database.Database, txm TxManager) http.Handler {
 		txm: txm,
 	}
 
-	return api.Handler(h)
+	return api.HandlerWithOptions(h, api.ChiServerOptions{
+		ErrorHandlerFunc: h.paramError,
+	})
 }
 
 func (h Handler) Health(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +50,11 @@ func (h Handler) Ready(w http.ResponseWriter, r *http.Request) {
 
 func (h Handler) CreateTrip(w http.ResponseWriter, r *http.Request, params api.CreateTripParams) {
 	var body api.CreateTripJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := decodeStrict(r, &body); err != nil {
+		h.writeInvalidRequest(w, r)
+		return
+	}
+	if err := validateTripData(body); err != nil {
 		h.writeInvalidRequest(w, r)
 		return
 	}
@@ -124,12 +128,4 @@ func (h Handler) FinishTrip(w http.ResponseWriter, r *http.Request, tripId api.T
 	}
 
 	writeJSON(w, r, http.StatusOK, toTripApi(*trip))
-}
-
-func (h Handler) ListTripPositions(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
-	h.writeMethodNotIMplemented(w, r)
-}
-
-func (h Handler) CreateTripPosition(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
-	h.writeMethodNotIMplemented(w, r)
 }

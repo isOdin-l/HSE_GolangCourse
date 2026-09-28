@@ -6,35 +6,32 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/google/uuid"
+
 	api "github.com/isOdin-l/HSE_GolangCourse.git/api/generated"
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/queries"
 )
 
 const (
-	problemTripNotFound  = "tripNotFoudn"
-	problemTripCompleted = "tripCompleted"
-	problemDriverBusy    = "driverBusy"
-	problemInternalError = "internalError"
+	problemInvalidRequest = "https://tripgo.example/problems/invalid-request"
+	problemTripNotFound   = "https://tripgo.example/problems/trip-not-found"
+	problemTripCompleted  = "https://tripgo.example/problems/trip-completed"
+	problemDriverBusy     = "https://tripgo.example/problems/driver-busy"
+	problemInternalError  = "https://tripgo.example/problems/internal-error"
 )
-
-func (h Handler) writeMethodNotIMplemented(w http.ResponseWriter, r *http.Request) {
-	writeProblem(w, r, http.StatusNotImplemented, toProblemApi(
-		http.StatusNotImplemented,
-		r.URL.Path,
-		"problemNotImplemented",
-		"method not implemented",
-		"Method not implemented",
-		"method_not_implemented"))
-}
 
 func (h Handler) writeInvalidRequest(w http.ResponseWriter, r *http.Request) {
 	writeProblem(w, r, http.StatusBadRequest, toProblemApi(
 		http.StatusBadRequest,
 		r.URL.Path,
-		"problemInvalidRequest",
+		problemInvalidRequest,
 		"Invalid request",
-		"Request failed",
+		"Request validation failed",
 		"invalid_request"))
+}
+
+func (h Handler) paramError(w http.ResponseWriter, r *http.Request, err error) {
+	h.writeInvalidRequest(w, r)
 }
 
 func (h Handler) respondError(w http.ResponseWriter, r *http.Request, err error) {
@@ -81,4 +78,39 @@ func writeJSON(w http.ResponseWriter, r *http.Request, status int, v any) {
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		slog.Error("encode error", "error", err, "method", r.Method, "path", r.URL.Path)
 	}
+}
+
+func decodeStrict(r *http.Request, dst any) error {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(dst); err != nil {
+		return err
+	}
+	if dec.More() {
+		return errors.New("unexpected trailing data")
+	}
+
+	return nil
+}
+
+func validateTripData(b api.TripData) error {
+	if uuid.UUID(b.UserId) == uuid.Nil || uuid.UUID(b.DriverId) == uuid.Nil {
+		return errors.New("user_id and driver_id must be non-empty UUIDs")
+	}
+	if !validCoordinates(b.StartPoint.Latitude, b.StartPoint.Longitude) {
+		return errors.New("start_point out of range")
+	}
+	if !validCoordinates(b.EndPoint.Latitude, b.EndPoint.Longitude) {
+		return errors.New("end_point out of range")
+	}
+	if b.Price < 0 {
+		return errors.New("price must not be negative")
+	}
+
+	return nil
+}
+
+func validCoordinates(lat, lng float64) bool {
+	return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
 }
