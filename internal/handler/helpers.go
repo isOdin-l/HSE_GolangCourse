@@ -30,10 +30,6 @@ func (h Handler) writeInvalidRequest(w http.ResponseWriter, r *http.Request) {
 		"invalid_request"))
 }
 
-func (h Handler) paramError(w http.ResponseWriter, r *http.Request, err error) {
-	h.writeInvalidRequest(w, r)
-}
-
 func (h Handler) respondError(w http.ResponseWriter, r *http.Request, err error) {
 	var (
 		status      int

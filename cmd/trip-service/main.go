@@ -36,7 +36,7 @@ func main() {
 	// пока так
 	transactionManager := db.NewTransactionManager(database.Pool())
 	handler := handler.New(database, transactionManager)
-	server := server.New(handler, config.ServerConfig)
+	server := server.New(handler, handler.ParamError, config.ServerConfig)
 
 	// graceful shutdown
 	serverErrors := make(chan error, 1)

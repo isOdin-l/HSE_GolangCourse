@@ -23,15 +23,15 @@ type Handler struct {
 	q   queries.Queries
 }
 
-func New(db *database.Database, txm TxManager) http.Handler {
-	h := Handler{
+func New(db *database.Database, txm TxManager) *Handler {
+	return &Handler{
 		db:  db,
 		txm: txm,
 	}
+}
 
-	return api.HandlerWithOptions(h, api.ChiServerOptions{
-		ErrorHandlerFunc: h.paramError,
-	})
+func (h Handler) ParamError(w http.ResponseWriter, r *http.Request, err error) {
+	h.writeInvalidRequest(w, r)
 }
 
 func (h Handler) Health(w http.ResponseWriter, r *http.Request) {
