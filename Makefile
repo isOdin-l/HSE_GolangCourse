@@ -1,17 +1,20 @@
-.PHONY: migrate run test lint generate
+# .env создаётся tripgoctl environment start; значения экспортируем в рецепты.
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
 
 run:
+	go run ./cmd/trip-service/main.go
 
-
-GOOSE_DRIVER=postgres
-GOOSE_DBSTRING="postgres://user:pass@localhost/trip"
 migrate:
-	goose ${GOOSE_DRIVER} ${GOOSE_DBSTRING} -dir migrations up
+	@test -n "$(DATABASE_URL)" || (echo "DATABASE_URL is not set. Run 'tripgoctl environment start' first."; exit 1)
+	go tool goose -dir migrations postgres "$(DATABASE_URL)" up
 
 generate:
-	oapi-codegen -generate types,chi-server -package api -o api/generated/api.gen.go contracts/openapi/trip-service.openapi.yaml
+	go tool oapi-codegen -generate types,chi-server -include-tags Trips,Service -package api -o api/generated/api.gen.go contracts/openapi/trip-service.openapi.yaml
 
 test:
-	go test ./...
+	go test -race ./...
 
 #lint:

@@ -15,10 +15,10 @@ type ServerConfig struct {
 	HttpAddress       string        `env:"HTTP_ADDR,notEmpty"`
 	LogLevel          string        `env:"LOG_LEVEL,notEmpty"`
 	ShutdownTimeout   time.Duration `env:"SHUTDOWN_TIMEOUT,notEmpty"`
-	ReadTimeout       time.Duration `env:"HTTP_READ_TIMEOUT,notEmpty"`
-	ReadHeaderTimeout time.Duration `env:"HTTP_READ_HEADER_TIMEOUT,notEmpty"`
-	WriteTimeout      time.Duration `env:"HTTP_WRITE_TIMEOUT,notEmpty"`
-	IdleTimeout       time.Duration `env:"HTTP_IDLE_TIMEOUT,notEmpty"`
+	ReadTimeout       time.Duration `env:"HTTP_READ_TIMEOUT" envDefault:"5s"`
+	ReadHeaderTimeout time.Duration `env:"HTTP_READ_HEADER_TIMEOUT" envDefault:"2s"`
+	WriteTimeout      time.Duration `env:"HTTP_WRITE_TIMEOUT" envDefault:"10s"`
+	IdleTimeout       time.Duration `env:"HTTP_IDLE_TIMEOUT" envDefault:"60s"`
 }
 
 type DbConfig struct {
