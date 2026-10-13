@@ -20,13 +20,14 @@ type TxManager interface {
 type Handler struct {
 	db  *database.Database
 	txm TxManager
-	q   queries.Queries
+	q   *queries.Queries
 }
 
-func New(db *database.Database, txm TxManager) *Handler {
+func New(db *database.Database, txm TxManager, q *queries.Queries) *Handler {
 	return &Handler{
 		db:  db,
 		txm: txm,
+		q:   q,
 	}
 }
 

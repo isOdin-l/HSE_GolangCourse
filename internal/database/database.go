@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/config"
 	"github.com/jackc/pgx/v5"
@@ -12,8 +11,7 @@ import (
 )
 
 type Database struct {
-	pool         *pgxpool.Pool
-	queryTimeout time.Duration
+	pool *pgxpool.Pool
 }
 
 func New(ctx context.Context, cfg *config.DbConfig) (*Database, error) {
@@ -40,8 +38,7 @@ func New(ctx context.Context, cfg *config.DbConfig) (*Database, error) {
 	}
 
 	return &Database{
-		pool:         pool,
-		queryTimeout: cfg.QueryTimeout,
+		pool: pool,
 	}, nil
 }
 
@@ -61,24 +58,15 @@ func (d *Database) Ping(ctx context.Context) error {
 }
 
 func (d *Database) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
-	qctx, cancel := context.WithTimeout(ctx, d.queryTimeout)
-	defer cancel()
-
-	return d.executor(qctx).Exec(qctx, sql, args...)
+	return d.executor(ctx).Exec(ctx, sql, args...)
 }
 
 func (d *Database) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
-	qctx, cancel := context.WithTimeout(ctx, d.queryTimeout)
-	defer cancel()
-
-	return d.executor(qctx).Query(qctx, sql, args...)
+	return d.executor(ctx).Query(ctx, sql, args...)
 }
 
 func (d *Database) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
-	qctx, cancel := context.WithTimeout(ctx, d.queryTimeout)
-	defer cancel()
-
-	return d.executor(qctx).QueryRow(qctx, sql, args...)
+	return d.executor(ctx).QueryRow(ctx, sql, args...)
 }
 
 type executor interface {

@@ -21,6 +21,15 @@ type DBTX interface {
 var qb = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 type Queries struct {
+	queryTimeout time.Duration
+}
+
+func New(queryTimeout time.Duration) *Queries {
+	return &Queries{queryTimeout: queryTimeout}
+}
+
+func (q Queries) queryCtx(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(ctx, q.queryTimeout)
 }
 
 const (
@@ -93,13 +102,16 @@ func (q *Queries) insertTripQuery(arg InsertTripParams) (string, []any, error) {
 		ToSql()
 }
 
-func (q *Queries) InsertTrip(ctx context.Context, db DBTX, arg InsertTripParams) (*Trip, error) {
+func (q Queries) InsertTrip(ctx context.Context, db DBTX, arg InsertTripParams) (*Trip, error) {
+	qctx, cancel := q.queryCtx(ctx)
+	defer cancel()
+
 	sql, args, err := q.insertTripQuery(arg)
 	if err != nil {
 		return nil, fmt.Errorf("build insert trip: %w", err)
 	}
 
-	trip, err := scanTrip(db.QueryRow(ctx, sql, args...))
+	trip, err := scanTrip(db.QueryRow(qctx, sql, args...))
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -135,13 +147,16 @@ func (q *Queries) insertTripStatusHistoryQuery(arg InsertTripStatusHistoryParams
 		ToSql()
 }
 
-func (q *Queries) InsertTripStatusHistory(ctx context.Context, db DBTX, arg InsertTripStatusHistoryParams) error {
+func (q Queries) InsertTripStatusHistory(ctx context.Context, db DBTX, arg InsertTripStatusHistoryParams) error {
+	qctx, cancel := q.queryCtx(ctx)
+	defer cancel()
+
 	sql, args, err := q.insertTripStatusHistoryQuery(arg)
 	if err != nil {
 		return fmt.Errorf("build insert trip status history: %w", err)
 	}
 
-	if _, err := db.Exec(ctx, sql, args...); err != nil {
+	if _, err := db.Exec(qctx, sql, args...); err != nil {
 		return fmt.Errorf("insert trip status history: %w", err)
 	}
 
@@ -156,13 +171,16 @@ func (q *Queries) getTripQuery(id uuid.UUID) (string, []any, error) {
 		ToSql()
 }
 
-func (q *Queries) GetTrip(ctx context.Context, db DBTX, id uuid.UUID) (*Trip, error) {
+func (q Queries) GetTrip(ctx context.Context, db DBTX, id uuid.UUID) (*Trip, error) {
+	qctx, cancel := q.queryCtx(ctx)
+	defer cancel()
+
 	sql, args, err := q.getTripQuery(id)
 	if err != nil {
 		return nil, fmt.Errorf("build select trip: %w", err)
 	}
 
-	trip, err := scanTrip(db.QueryRow(ctx, sql, args...))
+	trip, err := scanTrip(db.QueryRow(qctx, sql, args...))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrTripNotFound
@@ -184,13 +202,16 @@ func (q *Queries) finishTripQuery(id uuid.UUID, finishedAt time.Time) (string, [
 		ToSql()
 }
 
-func (q *Queries) FinishTrip(ctx context.Context, db DBTX, id uuid.UUID, finishedAt time.Time) (*Trip, error) {
+func (q Queries) FinishTrip(ctx context.Context, db DBTX, id uuid.UUID, finishedAt time.Time) (*Trip, error) {
+	qctx, cancel := q.queryCtx(ctx)
+	defer cancel()
+
 	sql, args, err := q.finishTripQuery(id, finishedAt)
 	if err != nil {
 		return nil, fmt.Errorf("build finish trip: %w", err)
 	}
 
-	trip, err := scanTrip(db.QueryRow(ctx, sql, args...))
+	trip, err := scanTrip(db.QueryRow(qctx, sql, args...))
 	if err == nil {
 		return trip, nil
 	}
@@ -199,7 +220,7 @@ func (q *Queries) FinishTrip(ctx context.Context, db DBTX, id uuid.UUID, finishe
 		return nil, fmt.Errorf("finish trip: %w", err)
 	}
 
-	current, err := q.GetTrip(ctx, db, id)
+	current, err := q.GetTrip(qctx, db, id)
 	if err != nil {
 		if errors.Is(err, ErrTripNotFound) {
 			return nil, ErrTripNotFound
