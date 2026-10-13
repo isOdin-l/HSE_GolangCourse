@@ -1,5 +1,5 @@
 # ^^^^^^^^^^^^^^^ BUILD ^^^^^^^^^^^^^^^
-FROM golang:1.27rc2-alpine3.24 AS builder
+FROM golang:1.27-alpine3.24 AS builder
 
 WORKDIR /app
 
