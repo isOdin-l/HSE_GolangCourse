@@ -82,6 +82,8 @@ Build:
 docker build -t trip-service:lab1 -f deploy/Dockerfile .
 ```
 
+Размер image 18.7MB
+
 Запуск рядом с PostgreSQL:
 ```bash
 docker run --rm --network host --env-file .env trip-service:lab1
