@@ -50,7 +50,7 @@ func (h Handler) Ready(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h Handler) CreateTrip(w http.ResponseWriter, r *http.Request, params api.CreateTripParams) {
-	var body api.CreateTripJSONRequestBody
+	var body tripRequest
 	if err := decodeStrict(r, &body); err != nil {
 		h.writeInvalidRequest(w, r)
 		return
@@ -66,13 +66,13 @@ func (h Handler) CreateTrip(w http.ResponseWriter, r *http.Request, params api.C
 		trip, err = h.q.InsertTrip(ctx, h.db,
 			queries.InsertTripParams{
 				ID:        uuid.New(),
-				UserID:    uuid.UUID(body.UserId),
-				DriverID:  uuid.UUID(body.DriverId),
-				StartLat:  body.StartPoint.Latitude,
-				StartLng:  body.StartPoint.Longitude,
-				EndLat:    body.EndPoint.Latitude,
-				EndLng:    body.EndPoint.Longitude,
-				Price:     body.Price,
+				UserID:    uuid.UUID(*body.UserId),
+				DriverID:  uuid.UUID(*body.DriverId),
+				StartLat:  *body.StartPoint.Latitude,
+				StartLng:  *body.StartPoint.Longitude,
+				EndLat:    *body.EndPoint.Latitude,
+				EndLng:    *body.EndPoint.Longitude,
+				Price:     *body.Price,
 				Status:    queries.TripStatusActive,
 				StartedAt: time.Now(),
 			})

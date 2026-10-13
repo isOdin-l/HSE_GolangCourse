@@ -90,17 +90,42 @@ func decodeStrict(r *http.Request, dst any) error {
 	return nil
 }
 
-func validateTripData(b api.TripData) error {
-	if uuid.UUID(b.UserId) == uuid.Nil || uuid.UUID(b.DriverId) == uuid.Nil {
-		return errors.New("user_id and driver_id must be non-empty UUIDs")
+type coordinatesRequest struct {
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
+}
+
+type tripRequest struct {
+	UserId     *uuid.UUID          `json:"user_id"`
+	DriverId   *uuid.UUID          `json:"driver_id"`
+	StartPoint *coordinatesRequest `json:"start_point"`
+	EndPoint   *coordinatesRequest `json:"end_point"`
+	Price      *int64              `json:"price"`
+}
+
+func validateTripRequest(b tripRequest) error {
+	if b.UserId == nil || *b.UserId == uuid.Nil {
+		return errors.New("user_id must be a non-empty UUID")
 	}
-	if !validCoordinates(b.StartPoint.Latitude, b.StartPoint.Longitude) {
+	if b.DriverId == nil || *b.DriverId == uuid.Nil {
+		return errors.New("driver_id must be a non-empty UUID")
+	}
+	if b.StartPoint == nil || b.StartPoint.Latitude == nil || b.StartPoint.Longitude == nil {
+		return errors.New("start_point with latitude and longitude is required")
+	}
+	if b.EndPoint == nil || b.EndPoint.Latitude == nil || b.EndPoint.Longitude == nil {
+		return errors.New("end_point with latitude and longitude is required")
+	}
+	if b.Price == nil {
+		return errors.New("price is required")
+	}
+	if !validCoordinates(*b.StartPoint.Latitude, *b.StartPoint.Longitude) {
 		return errors.New("start_point out of range")
 	}
-	if !validCoordinates(b.EndPoint.Latitude, b.EndPoint.Longitude) {
+	if !validCoordinates(*b.EndPoint.Latitude, *b.EndPoint.Longitude) {
 		return errors.New("end_point out of range")
 	}
-	if b.Price < 0 {
+	if *b.Price < 0 {
 		return errors.New("price must not be negative")
 	}
 
