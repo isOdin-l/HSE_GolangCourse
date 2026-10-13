@@ -103,7 +103,7 @@ type tripRequest struct {
 	Price      *int64              `json:"price"`
 }
 
-func validateTripRequest(b tripRequest) error {
+func validateTripData(b tripRequest) error {
 	if b.UserId == nil || *b.UserId == uuid.Nil {
 		return errors.New("user_id must be a non-empty UUID")
 	}
