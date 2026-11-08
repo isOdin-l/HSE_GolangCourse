@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -18,9 +20,11 @@ const (
 	problemTripCompleted  = "https://tripgo.example/problems/trip-completed"
 	problemDriverBusy     = "https://tripgo.example/problems/driver-busy"
 	problemInternalError  = "https://tripgo.example/problems/internal-error"
+
+	tripsPath = "/api/v1/trips"
 )
 
-func (h Handler) writeInvalidRequest(w http.ResponseWriter, r *http.Request) {
+func InvalidRequest(w http.ResponseWriter, r *http.Request, _ error) {
 	writeProblem(w, r, http.StatusBadRequest, toProblemApi(
 		http.StatusBadRequest,
 		r.URL.Path,
@@ -30,32 +34,15 @@ func (h Handler) writeInvalidRequest(w http.ResponseWriter, r *http.Request) {
 		"invalid_request"))
 }
 
-func (h Handler) respondError(w http.ResponseWriter, r *http.Request, err error) {
-	var (
-		status      int
-		problemType string
-		title       string
-		detail      string
-		code        string
-	)
-
-	switch {
-	case errors.Is(err, queries.ErrTripNotFound):
-		status, problemType, title, detail, code =
-			http.StatusNotFound, problemTripNotFound, "Trip not found", "Trip was not found", "trip_not_found"
-	case errors.Is(err, queries.ErrDriverBusy):
-		status, problemType, title, detail, code =
-			http.StatusConflict, problemDriverBusy, "Driver busy", "Driver already has an active trip", "driver_busy"
-	case errors.Is(err, queries.ErrTripCompleted):
-		status, problemType, title, detail, code =
-			http.StatusConflict, problemTripCompleted, "Trip completed", "Operation is not allowed for a completed trip", "trip_completed"
-	default:
-		slog.Error("internal error", "error", err, "method", r.Method, "path", r.URL.Path)
-		status, problemType, title, detail, code =
-			http.StatusInternalServerError, problemInternalError, "Internal Server Error", "Internal server error", "internal_error"
-	}
-
-	writeProblem(w, r, status, toProblemApi(status, r.URL.Path, problemType, title, detail, code))
+func InternalError(w http.ResponseWriter, r *http.Request, err error) {
+	slog.Error("internal error", "error", err, "method", r.Method, "path", r.URL.Path)
+	writeProblem(w, r, http.StatusInternalServerError, toProblemApi(
+		http.StatusInternalServerError,
+		r.URL.Path,
+		problemInternalError,
+		"Internal Server Error",
+		"Internal server error",
+		"internal_error"))
 }
 
 func writeProblem(w http.ResponseWriter, r *http.Request, status int, v api.Problem) {
@@ -67,27 +54,82 @@ func writeProblem(w http.ResponseWriter, r *http.Request, status int, v api.Prob
 	}
 }
 
-func writeJSON(w http.ResponseWriter, r *http.Request, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error("encode error", "error", err, "method", r.Method, "path", r.URL.Path)
+func errProblem(method, urlPath string, err error) (int, api.Problem) {
+	switch {
+	case errors.Is(err, queries.ErrTripNotFound):
+		return http.StatusNotFound, toProblemApi(
+			http.StatusNotFound,
+			urlPath,
+			problemTripNotFound,
+			"Trip not found",
+			"Trip was not found",
+			"trip_not_found")
+	case errors.Is(err, queries.ErrDriverBusy):
+		return http.StatusConflict, toProblemApi(
+			http.StatusConflict,
+			urlPath,
+			problemDriverBusy,
+			"Driver busy",
+			"Driver already has an active trip",
+			"driver_busy")
+	case errors.Is(err, queries.ErrTripCompleted):
+		return http.StatusConflict, toProblemApi(
+			http.StatusConflict,
+			urlPath,
+			problemTripCompleted,
+			"Trip completed",
+			"Operation is not allowed for a completed trip",
+			"trip_completed")
+	default:
+		slog.Error("internal error", "error", err, "method", method, "path", urlPath)
+		return http.StatusInternalServerError, toProblemApi(
+			http.StatusInternalServerError,
+			urlPath,
+			problemInternalError,
+			"Internal Server Error",
+			"Internal server error",
+			"internal_error")
 	}
 }
 
-func decodeStrict(r *http.Request, dst any) error {
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
+func tripPath(id uuid.UUID) string {
+	return tripsPath + "/" + id.String()
+}
 
-	if err := dec.Decode(dst); err != nil {
-		return err
-	}
-	if dec.More() {
-		return errors.New("unexpected trailing data")
-	}
+func StrictJSONBody(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != tripsPath {
+			next.ServeHTTP(w, r)
+			return
+		}
 
-	return nil
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			InvalidRequest(w, r, err)
+			return
+		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
+
+		dec := json.NewDecoder(bytes.NewReader(body))
+		dec.DisallowUnknownFields()
+
+		var probe tripRequest
+		if err := dec.Decode(&probe); err != nil {
+			InvalidRequest(w, r, err)
+			return
+		}
+		if dec.More() {
+			InvalidRequest(w, r, errors.New("unexpected trailing data"))
+			return
+		}
+
+		if err := validateTripData(probe); err != nil {
+			InvalidRequest(w, r, err)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 type coordinatesRequest struct {

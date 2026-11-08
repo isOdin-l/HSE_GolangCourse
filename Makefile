@@ -12,7 +12,7 @@ migrate:
 	go tool goose -dir migrations postgres "$(DATABASE_URL)" up
 
 generate:
-	go tool oapi-codegen -generate types,chi-server -include-tags Trips,Service -package api -o api/generated/api.gen.go contracts/openapi/trip-service.openapi.yaml
+	go tool oapi-codegen -generate types,strict-server,chi-server -include-tags Trips,Service -package api -o api/generated/api.gen.go contracts/openapi/trip-service.openapi.yaml
 
 test:
 	go test -race ./...

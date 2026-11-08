@@ -38,7 +38,7 @@ func main() {
 	transactionManager := db.NewTransactionManager(database.Pool())
 	queries := queries.New(config.DbConfig.QueryTimeout)
 	handler := handler.New(database, transactionManager, queries)
-	server := server.New(handler, handler.ParamError, config.ServerConfig)
+	server := server.New(handler, config.ServerConfig)
 
 	// graceful shutdown
 	serverErrors := make(chan error, 1)

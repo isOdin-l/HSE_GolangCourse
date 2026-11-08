@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -31,48 +32,46 @@ func New(db *database.Database, txm TxManager, q *queries.Queries) *Handler {
 	}
 }
 
-func (h Handler) ParamError(w http.ResponseWriter, r *http.Request, err error) {
-	h.writeInvalidRequest(w, r)
+func (h Handler) Health(_ context.Context, _ api.HealthRequestObject) (api.HealthResponseObject, error) {
+	return api.Health200JSONResponse(api.HealthResponse{Status: api.Ok}), nil
 }
 
-func (h Handler) Health(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, r, http.StatusOK, api.HealthResponse{Status: api.Ok})
-}
-
-func (h Handler) Ready(w http.ResponseWriter, r *http.Request) {
-	if err := h.db.Ping(r.Context()); err != nil {
+func (h Handler) Ready(ctx context.Context, _ api.ReadyRequestObject) (api.ReadyResponseObject, error) {
+	if err := h.db.Ping(ctx); err != nil {
 		slog.Warn("readiness check failed", "error", err)
-		writeJSON(w, r, http.StatusServiceUnavailable, api.HealthResponse{Status: api.Unavailable})
-		return
+		return api.Ready503JSONResponse(api.HealthResponse{Status: api.Unavailable}), nil
 	}
 
-	writeJSON(w, r, http.StatusOK, api.HealthResponse{Status: api.Ok})
+	return api.Ready200JSONResponse(api.HealthResponse{Status: api.Ok}), nil
 }
 
-func (h Handler) CreateTrip(w http.ResponseWriter, r *http.Request, params api.CreateTripParams) {
-	var body tripRequest
-	if err := decodeStrict(r, &body); err != nil {
-		h.writeInvalidRequest(w, r)
-		return
-	}
-	if err := validateTripData(body); err != nil {
-		h.writeInvalidRequest(w, r)
-		return
+func (h Handler) CreateTrip(ctx context.Context, request api.CreateTripRequestObject) (api.CreateTripResponseObject, error) {
+	if request.Body == nil {
+		problem := toProblemApi(
+			http.StatusBadRequest,
+			tripsPath,
+			problemInvalidRequest,
+			"Invalid request",
+			"Request validation failed",
+			"invalid_request")
+		return api.CreateTrip400ApplicationProblemPlusJSONResponse{
+			BadRequestApplicationProblemPlusJSONResponse: api.BadRequestApplicationProblemPlusJSONResponse(problem),
+		}, nil
 	}
 
 	var trip *queries.Trip
-	err := h.txm.Do(r.Context(), func(ctx context.Context) error {
+	err := h.txm.Do(ctx, func(ctx context.Context) error {
 		var err error
 		trip, err = h.q.InsertTrip(ctx, h.db,
 			queries.InsertTripParams{
 				ID:        uuid.New(),
-				UserID:    uuid.UUID(*body.UserId),
-				DriverID:  uuid.UUID(*body.DriverId),
-				StartLat:  *body.StartPoint.Latitude,
-				StartLng:  *body.StartPoint.Longitude,
-				EndLat:    *body.EndPoint.Latitude,
-				EndLng:    *body.EndPoint.Longitude,
-				Price:     *body.Price,
+				UserID:    request.Body.UserId,
+				DriverID:  request.Body.DriverId,
+				StartLat:  request.Body.StartPoint.Latitude,
+				StartLng:  request.Body.StartPoint.Longitude,
+				EndLat:    request.Body.EndPoint.Latitude,
+				EndLng:    request.Body.EndPoint.Longitude,
+				Price:     request.Body.Price,
 				Status:    queries.TripStatusActive,
 				StartedAt: time.Now(),
 			})
@@ -87,30 +86,46 @@ func (h Handler) CreateTrip(w http.ResponseWriter, r *http.Request, params api.C
 		})
 	})
 	if err != nil {
-		h.respondError(w, r, err)
-		return
+		status, problem := errProblem(http.MethodPost, tripsPath, err)
+		if status == http.StatusConflict {
+			return api.CreateTrip409ApplicationProblemPlusJSONResponse{CreateTripConflictApplicationProblemPlusJSONResponse: api.CreateTripConflictApplicationProblemPlusJSONResponse(problem)}, nil
+		}
+
+		return api.CreateTrip500ApplicationProblemPlusJSONResponse{InternalErrorApplicationProblemPlusJSONResponse: api.InternalErrorApplicationProblemPlusJSONResponse(problem)}, nil
 	}
 
-	w.Header().Set("Location", "/api/v1/trips/"+trip.ID.String())
-	writeJSON(w, r, http.StatusCreated, toTripApi(*trip))
+	location := tripPath(trip.ID)
+	return api.CreateTrip201JSONResponse{
+		Body: toTripApi(*trip),
+		Headers: api.CreateTrip201ResponseHeaders{
+			Location: &location,
+		},
+	}, nil
 }
 
-func (h Handler) GetTrip(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
-	trip, err := h.q.GetTrip(r.Context(), h.db, uuid.UUID(tripId))
+func (h Handler) GetTrip(ctx context.Context, request api.GetTripRequestObject) (api.GetTripResponseObject, error) {
+	path := tripPath(request.TripId)
+
+	trip, err := h.q.GetTrip(ctx, h.db, uuid.UUID(request.TripId))
 	if err != nil {
-		h.respondError(w, r, err)
-		return
+		status, problem := errProblem(http.MethodGet, path, err)
+		if status == http.StatusNotFound {
+			return api.GetTrip404ApplicationProblemPlusJSONResponse{TripNotFoundApplicationProblemPlusJSONResponse: api.TripNotFoundApplicationProblemPlusJSONResponse(problem)}, nil
+		}
+
+		return api.GetTrip500ApplicationProblemPlusJSONResponse{InternalErrorApplicationProblemPlusJSONResponse: api.InternalErrorApplicationProblemPlusJSONResponse(problem)}, nil
 	}
 
-	writeJSON(w, r, http.StatusOK, toTripApi(*trip))
+	return api.GetTrip200JSONResponse(toTripApi(*trip)), nil
 }
 
-func (h Handler) FinishTrip(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
-	var trip *queries.Trip
+func (h Handler) FinishTrip(ctx context.Context, request api.FinishTripRequestObject) (api.FinishTripResponseObject, error) {
+	path := fmt.Sprintf("%s/%s", tripPath(request.TripId), "finish")
 
-	err := h.txm.Do(r.Context(), func(ctx context.Context) error {
+	var trip *queries.Trip
+	err := h.txm.Do(ctx, func(ctx context.Context) error {
 		var err error
-		trip, err = h.q.FinishTrip(ctx, h.db, uuid.UUID(tripId), time.Now())
+		trip, err = h.q.FinishTrip(ctx, h.db, uuid.UUID(request.TripId), time.Now())
 		if err != nil {
 			return err
 		}
@@ -124,9 +139,16 @@ func (h Handler) FinishTrip(w http.ResponseWriter, r *http.Request, tripId api.T
 		})
 	})
 	if err != nil {
-		h.respondError(w, r, err)
-		return
+		status, problem := errProblem(http.MethodPost, path, err)
+		switch status {
+		case http.StatusNotFound:
+			return api.FinishTrip404ApplicationProblemPlusJSONResponse{TripNotFoundApplicationProblemPlusJSONResponse: api.TripNotFoundApplicationProblemPlusJSONResponse(problem)}, nil
+		case http.StatusConflict:
+			return api.FinishTrip409ApplicationProblemPlusJSONResponse{TripCompletedApplicationProblemPlusJSONResponse: api.TripCompletedApplicationProblemPlusJSONResponse(problem)}, nil
+		default:
+			return api.FinishTrip500ApplicationProblemPlusJSONResponse{InternalErrorApplicationProblemPlusJSONResponse: api.InternalErrorApplicationProblemPlusJSONResponse(problem)}, nil
+		}
 	}
 
-	writeJSON(w, r, http.StatusOK, toTripApi(*trip))
+	return api.FinishTrip200JSONResponse(toTripApi(*trip)), nil
 }
