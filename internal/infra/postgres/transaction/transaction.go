@@ -1,4 +1,4 @@
-package database
+package transaction
 
 import (
 	"context"
@@ -15,7 +15,7 @@ type TransactionManager struct {
 	pool *pgxpool.Pool
 }
 
-func NewTransactionManager(pool *pgxpool.Pool) *TransactionManager {
+func New(pool *pgxpool.Pool) *TransactionManager {
 	return &TransactionManager{pool: pool}
 }
 

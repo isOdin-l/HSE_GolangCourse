@@ -10,11 +10,20 @@ import (
 	"syscall"
 
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/config"
-	"github.com/isOdin-l/HSE_GolangCourse.git/internal/database"
-	db "github.com/isOdin-l/HSE_GolangCourse.git/internal/database"
-	"github.com/isOdin-l/HSE_GolangCourse.git/internal/handler"
+	appHttp "github.com/isOdin-l/HSE_GolangCourse.git/internal/http"
+	tripCreate "github.com/isOdin-l/HSE_GolangCourse.git/internal/http/trip/create"
+	tripFinish "github.com/isOdin-l/HSE_GolangCourse.git/internal/http/trip/finish"
+	tripGet "github.com/isOdin-l/HSE_GolangCourse.git/internal/http/trip/get"
+	tripReady "github.com/isOdin-l/HSE_GolangCourse.git/internal/http/trip/ready"
+	"github.com/isOdin-l/HSE_GolangCourse.git/internal/infra/postgres"
+	"github.com/isOdin-l/HSE_GolangCourse.git/internal/infra/postgres/transaction"
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/queries"
+	repoTrip "github.com/isOdin-l/HSE_GolangCourse.git/internal/repository/trip"
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/server"
+	usecaseTripCreate "github.com/isOdin-l/HSE_GolangCourse.git/internal/usecase/trip/create"
+	usecaseTripFinish "github.com/isOdin-l/HSE_GolangCourse.git/internal/usecase/trip/finish"
+	usecaseTripGet "github.com/isOdin-l/HSE_GolangCourse.git/internal/usecase/trip/get"
+	usecaseTripReady "github.com/isOdin-l/HSE_GolangCourse.git/internal/usecase/trip/ready"
 )
 
 func main() {
@@ -27,24 +36,40 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
-	database, err := database.New(ctx, &config.DbConfig)
+	database, err := postgres.New(ctx, &config.DbConfig)
 	if err != nil {
 		slog.Error("database setup", "error", err)
 		return
 	}
 	defer database.Close()
 
-	// пока так
-	transactionManager := db.NewTransactionManager(database.Pool())
-	queries := queries.New(config.DbConfig.QueryTimeout)
-	handler := handler.New(database, transactionManager, queries)
-	server := server.New(handler, config.ServerConfig)
+	// пока сборка зависимостей живёт здесь; потом уедет в container.New(cfg)
+	txManager := transaction.New(database.Pool())
+	sqlQueries := queries.New(database, config.DbConfig.QueryTimeout)
+	repo := repoTrip.New(database, sqlQueries)
+
+	// UseCases
+	createTrips := usecaseTripCreate.New(repo, txManager)
+	finishTrips := usecaseTripFinish.New(repo, txManager)
+	getTrips := usecaseTripGet.New(repo)
+	readyUseCase := usecaseTripReady.New(repo)
+
+	// Handlers
+	handler := appHttp.New(
+		tripCreate.New(createTrips),
+		tripGet.New(getTrips),
+		tripFinish.New(finishTrips),
+		tripReady.New(readyUseCase),
+	)
+
+	// HTTP Server
+	httpServer := server.New(handler, config.ServerConfig)
 
 	// graceful shutdown
 	serverErrors := make(chan error, 1)
 	go func() {
 		log.Printf("HTTP server is listening on %s", config.HttpAddress)
-		serverErrors <- server.ListenAndServe()
+		serverErrors <- httpServer.ListenAndServe()
 	}()
 
 	select {
@@ -56,9 +81,8 @@ func main() {
 		shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), config.ShutdownTimeout)
 		defer cancelShutdown()
 
-		if err := server.Shutdown(shutdownCtx); err != nil {
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
 			log.Printf("shutdown HTTP server: %v", err)
 		}
 	}
-
 }

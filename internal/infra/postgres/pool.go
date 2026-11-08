@@ -1,10 +1,11 @@
-package database
+package postgres
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/config"
+	transaction "github.com/isOdin-l/HSE_GolangCourse.git/internal/infra/postgres/transaction"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -76,7 +77,7 @@ type executor interface {
 }
 
 func (d *Database) executor(ctx context.Context) executor {
-	if tx, ok := TxFromContext(ctx); ok {
+	if tx, ok := transaction.TxFromContext(ctx); ok {
 		return tx
 	}
 	return d.pool
