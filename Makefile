@@ -17,4 +17,5 @@ generate:
 test:
 	go test -race ./...
 
-#lint:
+lint:
+	go tool golangci-lint run

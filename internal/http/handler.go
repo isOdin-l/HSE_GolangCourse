@@ -38,6 +38,6 @@ func New(
 	}
 }
 
-func (h *Handler) Health(_ context.Context, _ api.HealthRequestObject) (api.HealthResponseObject, error) {
+func (h *Handler) Health(_ context.Context, _ api.HealthRequestObject) (api.HealthResponseObject, error) { //nolint:unparam
 	return api.Health200JSONResponse(api.HealthResponse{Status: api.Ok}), nil
 }

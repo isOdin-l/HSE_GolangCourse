@@ -2,7 +2,6 @@ package get
 
 import (
 	"context"
-
 	"uuid"
 
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/domain/trip"

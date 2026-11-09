@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"uuid"
 
+	"github.com/oapi-codegen/runtime/types"
+
 	api "github.com/isOdin-l/HSE_GolangCourse.git/api/generated"
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/domain/trip"
-	"github.com/oapi-codegen/runtime/types"
 )
 
 const tripsPath = "/api/v1/trips"

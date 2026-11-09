@@ -45,7 +45,7 @@ func main() {
 
 	// пока сборка зависимостей живёт здесь; потом уедет в container.New(cfg)
 	txManager := transaction.New(database.Pool())
-	sqlQueries := queries.New(database, config.DbConfig.QueryTimeout)
+	sqlQueries := queries.New(database, config.QueryTimeout)
 	repo := repoTrip.New(database, sqlQueries)
 
 	// UseCases

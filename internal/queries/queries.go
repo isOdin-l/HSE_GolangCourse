@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
 	"uuid"
 
 	sq "github.com/Masterminds/squirrel"

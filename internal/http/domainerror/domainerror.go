@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	api "github.com/isOdin-l/HSE_GolangCourse.git/api/generated"
-
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/domain/trip"
 )
 
@@ -50,7 +49,7 @@ func problem(status int, urlPath, problemType, title, detail, code string) api.P
 	return api.Problem{
 		Type:     problemType,
 		Title:    title,
-		Status:   int32(status),
+		Status:   int32(status), //nolint:gosec
 		Detail:   &detail,
 		Instance: &urlPath,
 		Code:     code,

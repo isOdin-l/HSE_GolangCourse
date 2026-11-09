@@ -15,7 +15,7 @@ func New(uc usecase) *Handler {
 	return &Handler{uc: uc}
 }
 
-func (h *Handler) Ready(ctx context.Context, _ api.ReadyRequestObject) (api.ReadyResponseObject, error) {
+func (h *Handler) Ready(ctx context.Context, _ api.ReadyRequestObject) (api.ReadyResponseObject, error) { //nolint:unparam
 	if err := h.uc.Ready(ctx); err != nil {
 		slog.Warn("readiness check failed", "error", err)
 		return api.Ready503JSONResponse(api.HealthResponse{Status: api.Unavailable}), nil

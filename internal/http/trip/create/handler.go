@@ -4,7 +4,6 @@ import (
 	"context"
 
 	api "github.com/isOdin-l/HSE_GolangCourse.git/api/generated"
-
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/http/domainerror"
 )
 
@@ -16,7 +15,7 @@ func New(uc usecase) *Handler {
 	return &Handler{uc: uc}
 }
 
-func (h *Handler) CreateTrip(ctx context.Context, request api.CreateTripRequestObject) (api.CreateTripResponseObject, error) {
+func (h *Handler) CreateTrip(ctx context.Context, request api.CreateTripRequestObject) (api.CreateTripResponseObject, error) { //nolint:unparam
 	if request.Body == nil {
 		_, problem := domainerror.Invalid(tripsPath)
 		return api.CreateTrip400ApplicationProblemPlusJSONResponse{

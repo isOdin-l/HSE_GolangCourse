@@ -7,11 +7,9 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-
 	"uuid"
 
 	api "github.com/isOdin-l/HSE_GolangCourse.git/api/generated"
-
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/http/domainerror"
 )
 
@@ -101,16 +99,16 @@ func validCoordinates(lat, lng float64) bool {
 
 func (h *Handler) InvalidRequest(w http.ResponseWriter, r *http.Request, _ error) {
 	status, problem := domainerror.Invalid(r.URL.Path)
-	writeProblem(w, r, status, problem)
+	writeProblem(w, status, problem)
 }
 
 func (h *Handler) InternalError(w http.ResponseWriter, r *http.Request, err error) {
 	slog.Error("internal error", "error", err, "method", r.Method, "path", r.URL.Path)
 	status, problem := domainerror.Internal(r.URL.Path)
-	writeProblem(w, r, status, problem)
+	writeProblem(w, status, problem)
 }
 
-func writeProblem(w http.ResponseWriter, r *http.Request, status int, v api.Problem) {
+func writeProblem(w http.ResponseWriter, status int, v api.Problem) {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(status)
 

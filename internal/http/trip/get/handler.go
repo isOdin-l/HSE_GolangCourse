@@ -6,7 +6,6 @@ import (
 	"uuid"
 
 	api "github.com/isOdin-l/HSE_GolangCourse.git/api/generated"
-
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/http/domainerror"
 )
 
@@ -18,7 +17,7 @@ func New(uc usecase) *Handler {
 	return &Handler{uc: uc}
 }
 
-func (h *Handler) GetTrip(ctx context.Context, request api.GetTripRequestObject) (api.GetTripResponseObject, error) {
+func (h *Handler) GetTrip(ctx context.Context, request api.GetTripRequestObject) (api.GetTripResponseObject, error) { //nolint:unparam
 	id := uuid.UUID(request.TripId)
 
 	t, err := h.uc.Get(ctx, id)

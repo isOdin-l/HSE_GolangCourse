@@ -8,7 +8,6 @@ import (
 	"uuid"
 
 	api "github.com/isOdin-l/HSE_GolangCourse.git/api/generated"
-
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/http/domainerror"
 )
 
@@ -20,7 +19,7 @@ func New(uc usecase) *Handler {
 	return &Handler{uc: uc}
 }
 
-func (h *Handler) FinishTrip(ctx context.Context, request api.FinishTripRequestObject) (api.FinishTripResponseObject, error) {
+func (h *Handler) FinishTrip(ctx context.Context, request api.FinishTripRequestObject) (api.FinishTripResponseObject, error) { //nolint:unparam
 	urlPath := fmt.Sprintf("%s/%s/finish", tripsPath, request.TripId.String())
 
 	trip, err := h.uc.Finish(ctx, uuid.UUID(request.TripId), time.Now())
