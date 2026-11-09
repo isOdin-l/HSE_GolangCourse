@@ -26,6 +26,7 @@ func (uc *UseCase) Finish(ctx context.Context, id uuid.UUID, at time.Time) (doma
 			return err
 		}
 
+		from := trip.Status
 		if err := trip.Finish(at); err != nil {
 			return err
 		}
@@ -36,7 +37,7 @@ func (uc *UseCase) Finish(ctx context.Context, id uuid.UUID, at time.Time) (doma
 
 		if err := uc.repo.SaveStatusChange(ctx, domain.StatusEvent{
 			TripID: id,
-			From:   &trip.Status,
+			From:   &from,
 			To:     domain.StatusCompleted,
 			Reason: "trip finished",
 		}); err != nil {

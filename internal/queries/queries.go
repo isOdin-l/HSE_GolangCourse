@@ -1,5 +1,7 @@
 package queries
 
+//go:generate go tool mockgen -source ${GOFILE} -destination mocks_test.go -package ${GOPACKAGE}
+
 import (
 	"context"
 	"errors"
@@ -46,7 +48,7 @@ func (q *Queries) GetTrip(ctx context.Context, id uuid.UUID) (domain.Trip, error
 
 	sql, args, err := qb.Select(tripColumns).
 		From(tripTable).
-		Where(sq.Eq{"id": id}).
+		Where(sq.Eq{"id": id.String()}).
 		ToSql()
 	if err != nil {
 		return domain.Trip{}, fmt.Errorf("build select trip: %w", err)
@@ -147,7 +149,7 @@ func (q *Queries) UpdateTrip(ctx context.Context, trip domain.Trip) error {
 		Set("status", string(trip.Status)).
 		Set("finished_at", trip.FinishedAt).
 		Set("updated_at", time.Now()).
-		Where(sq.Eq{"id": trip.ID}).
+		Where(sq.Eq{"id": trip.ID.String()}).
 		ToSql()
 	if err != nil {
 		return fmt.Errorf("build update trip: %w", err)
