@@ -1,4 +1,4 @@
-package database
+package transaction
 
 import (
 	"context"
@@ -6,16 +6,15 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type txCtxKey struct{}
 
 type TransactionManager struct {
-	pool *pgxpool.Pool
+	pool txPool
 }
 
-func NewTransactionManager(pool *pgxpool.Pool) *TransactionManager {
+func New(pool txPool) *TransactionManager {
 	return &TransactionManager{pool: pool}
 }
 
