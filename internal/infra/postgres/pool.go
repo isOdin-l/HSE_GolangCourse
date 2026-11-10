@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/config"
 	transaction "github.com/isOdin-l/HSE_GolangCourse.git/internal/infra/postgres/transaction"
@@ -16,7 +19,18 @@ type Database struct {
 	pool *pgxpool.Pool
 }
 
-func New(ctx context.Context, cfg *config.DbConfig) (*Database, error) {
+type PoolOption func(*pgxpool.Config)
+
+func WithOtelTracer(tp trace.TracerProvider, mp metric.MeterProvider) PoolOption {
+	return func(cfg *pgxpool.Config) {
+		cfg.ConnConfig.Tracer = otelpgx.NewTracer(
+			otelpgx.WithTracerProvider(tp),
+			otelpgx.WithMeterProvider(mp),
+		)
+	}
+}
+
+func New(ctx context.Context, cfg *config.DbConfig, opts ...PoolOption) (*Database, error) {
 	poolConfig, err := pgxpool.ParseConfig(cfg.Url)
 	if err != nil {
 		return nil, err
@@ -25,6 +39,10 @@ func New(ctx context.Context, cfg *config.DbConfig) (*Database, error) {
 	poolConfig.MinConns = cfg.MinConns
 	poolConfig.MaxConnLifetime = cfg.MaxConnLifeTime
 	poolConfig.PingTimeout = cfg.ConnectTimeout
+
+	for _, opt := range opts {
+		opt(poolConfig)
+	}
 
 	pingCtx, cancelPing := context.WithTimeout(ctx, cfg.ConnectTimeout)
 	defer cancelPing()

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 
 	api "github.com/isOdin-l/HSE_GolangCourse.git/api/generated"
 	"github.com/isOdin-l/HSE_GolangCourse.git/internal/http/trip/create"
@@ -22,6 +23,8 @@ type Handler struct {
 	*TripGetHandler
 	*TripFinishHandler
 	*TripReadyHandler
+
+	log *slog.Logger
 }
 
 func New(
@@ -29,12 +32,14 @@ func New(
 	getTrip *get.Handler,
 	finishTrip *finish.Handler,
 	readyCheck *ready.Handler,
+	log *slog.Logger,
 ) *Handler {
 	return &Handler{
 		TripCreateHandler: createTrip,
 		TripGetHandler:    getTrip,
 		TripFinishHandler: finishTrip,
 		TripReadyHandler:  readyCheck,
+		log:               log,
 	}
 }
 

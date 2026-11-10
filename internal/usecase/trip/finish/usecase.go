@@ -9,12 +9,14 @@ import (
 )
 
 type UseCase struct {
-	repo tripRepository
-	tx   txManager
+	repo    tripRepository
+	tx      txManager
+	metrics tripMetrics
+	log     eventLogger
 }
 
-func New(repo tripRepository, tx txManager) *UseCase {
-	return &UseCase{repo: repo, tx: tx}
+func New(repo tripRepository, tx txManager, metrics tripMetrics, log eventLogger) *UseCase {
+	return &UseCase{repo: repo, tx: tx, metrics: metrics, log: log}
 }
 
 func (uc *UseCase) Finish(ctx context.Context, id uuid.UUID, at time.Time) (domain.Trip, error) {
@@ -47,6 +49,11 @@ func (uc *UseCase) Finish(ctx context.Context, id uuid.UUID, at time.Time) (doma
 		finished = trip
 		return nil
 	})
+
+	if err == nil {
+		uc.metrics.TripCompleted(ctx)
+		uc.log.Info(ctx, "trip completed", "trip_id", id)
+	}
 
 	return finished, err
 }

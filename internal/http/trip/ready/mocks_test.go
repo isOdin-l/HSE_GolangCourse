@@ -53,3 +53,44 @@ func (mr *MockusecaseMockRecorder) Ready(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ready", reflect.TypeOf((*Mockusecase)(nil).Ready), ctx)
 }
+
+// MockeventLogger is a mock of eventLogger interface.
+type MockeventLogger struct {
+	ctrl     *gomock.Controller
+	recorder *MockeventLoggerMockRecorder
+	isgomock struct{}
+}
+
+// MockeventLoggerMockRecorder is the mock recorder for MockeventLogger.
+type MockeventLoggerMockRecorder struct {
+	mock *MockeventLogger
+}
+
+// NewMockeventLogger creates a new mock instance.
+func NewMockeventLogger(ctrl *gomock.Controller) *MockeventLogger {
+	mock := &MockeventLogger{ctrl: ctrl}
+	mock.recorder = &MockeventLoggerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockeventLogger) EXPECT() *MockeventLoggerMockRecorder {
+	return m.recorder
+}
+
+// Warn mocks base method.
+func (m *MockeventLogger) Warn(ctx context.Context, msg string, args ...any) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, msg}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "Warn", varargs...)
+}
+
+// Warn indicates an expected call of Warn.
+func (mr *MockeventLoggerMockRecorder) Warn(ctx, msg any, args ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, msg}, args...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Warn", reflect.TypeOf((*MockeventLogger)(nil).Warn), varargs...)
+}

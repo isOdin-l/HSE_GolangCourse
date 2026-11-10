@@ -13,6 +13,8 @@ migrate:
 
 generate:
 	go tool oapi-codegen -generate types,strict-server,chi-server -include-tags Trips,Service -package api -o api/generated/api.gen.go contracts/openapi/trip-service.openapi.yaml
+	go tool mockgen -version
+	go generate ./...
 
 lint:
 	go tool golangci-lint run

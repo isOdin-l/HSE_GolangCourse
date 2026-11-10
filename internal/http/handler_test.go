@@ -20,7 +20,7 @@ const (
 )
 
 func TestNew(t *testing.T) {
-	aggregate := New(nil, nil, nil, nil)
+	aggregate := New(nil, nil, nil, nil, slog.New(slog.NewJSONHandler(io.Discard, nil)))
 
 	if aggregate == nil {
 		t.Fatal("New = nil, want handler")
@@ -183,7 +183,7 @@ func TestStrictJSONBodyReplacesBodyForProbeValidation(t *testing.T) {
 func TestInternalErrorHidesDetails(t *testing.T) {
 	discardLogger(t)
 
-	aggregate := &Handler{}
+	aggregate := &Handler{log: slog.New(slog.NewJSONHandler(io.Discard, nil))}
 	secret := "connection refused to 10.0.0.5:5432"
 
 	rec := httptest.NewRecorder()

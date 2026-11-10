@@ -9,12 +9,14 @@ import (
 )
 
 type UseCase struct {
-	repo repository
-	tx   txManager
+	repo    repository
+	tx      txManager
+	metrics tripMetrics
+	log     eventLogger
 }
 
-func New(repo repository, tx txManager) *UseCase {
-	return &UseCase{repo: repo, tx: tx}
+func New(repo repository, tx txManager, metrics tripMetrics, log eventLogger) *UseCase {
+	return &UseCase{repo: repo, tx: tx, metrics: metrics, log: log}
 }
 
 func (uc *UseCase) Create(ctx context.Context, trip domain.Trip) (domain.Trip, error) {
@@ -33,6 +35,11 @@ func (uc *UseCase) Create(ctx context.Context, trip domain.Trip) (domain.Trip, e
 			Reason: "trip created",
 		})
 	})
+
+	if err == nil {
+		uc.metrics.TripCreated(ctx)
+		uc.log.Info(ctx, "trip created", "trip_id", trip.ID)
+	}
 
 	return trip, err
 }

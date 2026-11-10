@@ -40,7 +40,14 @@ func TestHandlerReady(t *testing.T) {
 			uc := NewMockusecase(ctrl)
 			tt.setup(uc)
 
-			h := New(uc)
+			var log eventLogger
+			if tt.name == "unhealthy repository reports unavailable" {
+				mockLog := NewMockeventLogger(ctrl)
+				mockLog.EXPECT().Warn(gomock.Any(), "readiness check failed", gomock.Any()).Times(1)
+				log = mockLog
+			}
+
+			h := New(uc, log)
 
 			resp, err := h.Ready(context.Background(), api.ReadyRequestObject{})
 			if err != nil {

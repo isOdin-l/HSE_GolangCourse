@@ -18,3 +18,11 @@ type tripRepository interface {
 type txManager interface {
 	Do(ctx context.Context, fn func(ctx context.Context) error) error
 }
+
+type tripMetrics interface {
+	TripCompleted(ctx context.Context)
+}
+
+type eventLogger interface {
+	Info(ctx context.Context, msg string, args ...any)
+}

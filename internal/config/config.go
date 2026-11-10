@@ -9,8 +9,18 @@ import (
 type Config struct {
 	DbConfig
 	ServerConfig
+	TelemetryConfig
 }
 
+type TelemetryConfig struct {
+	ServiceName      string        `env:"OTEL_SERVICE_NAME,notEmpty"`
+	Endpoint         string        `env:"OTEL_EXPORTER_OTLP_ENDPOINT,notEmpty"`
+	Protocol         string        `env:"OTEL_EXPORTER_OTLP_PROTOCOL,notEmpty"`
+	ResourceAttrs    string        `env:"OTEL_RESOURCE_ATTRIBUTES"`
+	TraceSampler     string        `env:"OTEL_TRACES_SAMPLER" envDefault:"parentbased_always_on"`
+	TraceSamplerArgs string        `env:"OTEL_TRACES_SAMPLER_ARG"`
+	FlushTimeout     time.Duration `env:"TELEMETRY_FLUSH_TIMEOUT" envDefault:"5s"`
+}
 type ServerConfig struct {
 	HttpAddress       string        `env:"HTTP_ADDR,notEmpty"`
 	LogLevel          string        `env:"LOG_LEVEL,notEmpty"`

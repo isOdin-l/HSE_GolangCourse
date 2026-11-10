@@ -118,9 +118,16 @@ func TestUseCaseFinish(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			repo := NewMocktripRepository(ctrl)
 			tx := NewMocktxManager(ctrl)
+			metrics := NewMocktripMetrics(ctrl)
+			logger := NewMockeventLogger(ctrl)
 			tt.setup(t, repo, tx)
 
-			uc := New(repo, tx)
+			if tt.wantErr == nil {
+				metrics.EXPECT().TripCompleted(gomock.Any()).Times(1)
+				logger.EXPECT().Info(gomock.Any(), "trip completed", gomock.Any()).Times(1)
+			}
+
+			uc := New(repo, tx, metrics, logger)
 
 			got, err := uc.Finish(context.Background(), tripID, finishTime)
 

@@ -122,3 +122,80 @@ func (mr *MocktxManagerMockRecorder) Do(ctx, fn any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MocktxManager)(nil).Do), ctx, fn)
 }
+
+// MocktripMetrics is a mock of tripMetrics interface.
+type MocktripMetrics struct {
+	ctrl     *gomock.Controller
+	recorder *MocktripMetricsMockRecorder
+	isgomock struct{}
+}
+
+// MocktripMetricsMockRecorder is the mock recorder for MocktripMetrics.
+type MocktripMetricsMockRecorder struct {
+	mock *MocktripMetrics
+}
+
+// NewMocktripMetrics creates a new mock instance.
+func NewMocktripMetrics(ctrl *gomock.Controller) *MocktripMetrics {
+	mock := &MocktripMetrics{ctrl: ctrl}
+	mock.recorder = &MocktripMetricsMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocktripMetrics) EXPECT() *MocktripMetricsMockRecorder {
+	return m.recorder
+}
+
+// TripCompleted mocks base method.
+func (m *MocktripMetrics) TripCompleted(ctx context.Context) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "TripCompleted", ctx)
+}
+
+// TripCompleted indicates an expected call of TripCompleted.
+func (mr *MocktripMetricsMockRecorder) TripCompleted(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TripCompleted", reflect.TypeOf((*MocktripMetrics)(nil).TripCompleted), ctx)
+}
+
+// MockeventLogger is a mock of eventLogger interface.
+type MockeventLogger struct {
+	ctrl     *gomock.Controller
+	recorder *MockeventLoggerMockRecorder
+	isgomock struct{}
+}
+
+// MockeventLoggerMockRecorder is the mock recorder for MockeventLogger.
+type MockeventLoggerMockRecorder struct {
+	mock *MockeventLogger
+}
+
+// NewMockeventLogger creates a new mock instance.
+func NewMockeventLogger(ctrl *gomock.Controller) *MockeventLogger {
+	mock := &MockeventLogger{ctrl: ctrl}
+	mock.recorder = &MockeventLoggerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockeventLogger) EXPECT() *MockeventLoggerMockRecorder {
+	return m.recorder
+}
+
+// Info mocks base method.
+func (m *MockeventLogger) Info(ctx context.Context, msg string, args ...any) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, msg}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "Info", varargs...)
+}
+
+// Info indicates an expected call of Info.
+func (mr *MockeventLoggerMockRecorder) Info(ctx, msg any, args ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, msg}, args...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Info", reflect.TypeOf((*MockeventLogger)(nil).Info), varargs...)
+}

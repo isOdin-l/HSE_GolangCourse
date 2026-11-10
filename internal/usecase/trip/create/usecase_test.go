@@ -99,9 +99,16 @@ func TestUseCaseCreate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			repo := NewMockrepository(ctrl)
 			tx := NewMocktxManager(ctrl)
+			metrics := NewMocktripMetrics(ctrl)
+			logger := NewMockeventLogger(ctrl)
 			tt.setup(t, repo, tx)
 
-			uc := New(repo, tx)
+			if tt.wantErr == nil {
+				metrics.EXPECT().TripCreated(gomock.Any()).Times(1)
+				logger.EXPECT().Info(gomock.Any(), "trip created", gomock.Any()).Times(1)
+			}
+
+			uc := New(repo, tx, metrics, logger)
 
 			input := domain.Trip{
 				UserID:   uuid.NewV7(),
